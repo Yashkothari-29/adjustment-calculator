@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FundFlow — Adjustment Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2a2d38;
+    --accent: #f0c040;
+    --accent2: #e07b3f;
+    --green: #4caf82;
+    --red: #e05a5a;
+    --text: #eef0f6;
+    --muted: #7a7f94;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* ---- header ---- */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 24px 24px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .header p { font-family: 'DM Mono', monospace; font-size: .78rem; color: var(--muted); }
+
+  /* ---- goal card ---- */
+  .goal-card {
+    margin: 28px 20px 0;
+    background: linear-gradient(135deg, #1e1b10 0%, #1a1f14 100%);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 24px 22px;
+  }
+  .goal-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .goal-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .currency-badge {
+    background: var(--accent);
+    color: #111;
+    font-size: .85rem;
+    font-weight: 800;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .goal-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.9rem;
+    font-weight: 500;
+    width: 100%;
+  }
+  .goal-input::placeholder { color: var(--border); }
+
+  /* progress bar */
+  .progress-wrap {
+    margin: 20px 20px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    margin-bottom: 12px;
+  }
+  .stat-lbl { color: var(--muted); }
+  .stat-val { font-weight: 500; }
+  .stat-val.done { color: var(--green); }
+  .stat-val.remaining { color: var(--accent2); }
+
+  .progress-bar-bg {
+    height: 10px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--accent));
+    border-radius: 99px;
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  /* ---- section heading ---- */
+  .section-head {
+    margin: 28px 20px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-head span {
+    font-size: .7rem;
+    letter-spacing: .14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ---- source cards ---- */
+  .sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 20px;
+  }
+
+  .source-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    position: relative;
+    animation: slideIn .3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .source-card.interest-card { border-color: #3a2a1e; }
+  .source-card.free-card     { border-color: #1a2e22; }
+
+  .card-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 90px;
+  }
+  .field-lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .field-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .92rem;
+    padding: 9px 12px;
+    outline: none;
+    width: 100%;
+    transition: border-color .2s;
+  }
+  .field-input:focus { border-color: var(--accent); }
+  .field-input::placeholder { color: var(--border); }
+
+  .interest-type-toggle {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .toggle-btn {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .toggle-btn.active-interest {
+    background: #3a200e;
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .toggle-btn.active-free {
+    background: #0e2a1c;
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .interest-result {
+    margin-top: 12px;
+    background: var(--surface2);
+    border-radius: 9px;
+    padding: 10px 14px;
+    display: none;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .interest-result.visible { display: flex; }
+  .ir-item { font-family: 'DM Mono', monospace; font-size: .75rem; }
+  .ir-item .ir-lbl { color: var(--muted); display: block; margin-bottom: 2px; font-size: .65rem; }
+  .ir-item .ir-val { color: var(--accent2); font-weight: 500; }
+
+  .delete-btn {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    width: 26px; height: 26px;
+    font-size: .85rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .delete-btn:hover { border-color: var(--red); color: var(--red); background: #2a1414; }
+
+  /* ---- add button ---- */
+  .add-btn-wrap { padding: 18px 20px 0; }
+  .add-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: var(--radius);
+    border: 1.5px dashed var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all .2s;
+  }
+  .add-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #1e1b10;
+  }
+  .add-icon {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: background .2s;
+  }
+  .add-btn:hover .add-icon { background: var(--accent); color: #111; }
+
+  /* ---- done button ---- */
+  .done-btn-wrap { padding: 22px 20px 0; }
+  .done-btn {
+    width: 100%;
+    padding: 17px;
+    border-radius: var(--radius);
+    border: none;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #111;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+  }
+  .done-btn:hover { opacity: .9; }
+  .done-btn:active { transform: scale(.98); }
+
+  /* ---- summary panel ---- */
+  .summary-panel {
+    margin: 28px 20px 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: none;
+    animation: slideIn .4s ease;
+  }
+  .summary-panel.visible { display: block; }
+
+  .summary-header {
+    background: var(--surface2);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-title {
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .period-toggle {
+    display: flex;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .period-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .period-btn.active {
+    background: var(--accent);
+    color: #111;
+    font-weight: 500;
+  }
+
+  .summary-body { padding: 20px; }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .sr-name { color: var(--muted); font-family: 'DM Mono', monospace; font-size: .8rem; }
+  .sr-amount { font-weight: 600; }
+  .sr-interest { font-family: 'DM Mono', monospace; font-size: .8rem; }
+  .sr-interest.has-interest { color: var(--accent2); }
+  .sr-interest.no-interest { color: var(--green); }
+
+  .summary-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #1e1b10, #1a1a1a);
+    border-radius: 10px;
+    margin-top: 14px;
+    border: 1px solid var(--accent);
+  }
+  .total-lbl { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .total-val { font-size: 1.3rem; font-weight: 800; color: var(--accent); font-family: 'DM Mono', monospace; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    font-family: 'DM Mono', monospace;
+    margin: 18px 20px 0;
+  }
+  .badge-done { background: #0e2a1c; border: 1px solid var(--green); color: var(--green); }
+  .badge-partial { background: #2a200e; border: 1px solid var(--accent); color: var(--accent); }
+  .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* small chips on source cards */
+  .source-num {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>FundFlow</h1>
+  <p>Adjustment Planner</p>
+</div>
+
+<!-- GOAL CARD -->
+<div class="goal-card">
+  <div class="goal-label">💰 Total Amount to Arrange</div>
+  <div class="goal-input-wrap">
+    <div class="currency-badge">₹</div>
+    <input class="goal-input" id="goalInput" type="number" placeholder="e.g. 2400000" oninput="updateProgress()">
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-wrap" id="progressWrap" style="display:none">
+  <div class="progress-stats">
+    <div><div class="stat-lbl">Arranged</div><div class="stat-val done" id="doneAmt">₹0</div></div>
+    <div style="text-align:center"><div class="stat-lbl">Progress</div><div class="stat-val" id="pct">0%</div></div>
+    <div style="text-align:right"><div class="stat-lbl">Remaining</div><div class="stat-val remaining" id="remAmt">₹0</div></div>
+  </div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+</div>
+
+<!-- SOURCE SECTION -->
+<div class="section-head">
+  <span>Sources</span>
+  <div class="section-line"></div>
+</div>
+
+<div class="sources-list" id="sourcesList"></div>
+
+<!-- ADD BUTTON -->
+<div class="add-btn-wrap">
+  <button class="add-btn" onclick="addSource()">
+    <div class="add-icon">+</div>
+    Add Money Source
+  </button>
+</div>
+
+<!-- DONE BUTTON -->
+<div class="done-btn-wrap">
+  <button class="done-btn" onclick="showSummary()">✓ Adjustment Done — Show Summary</button>
+</div>
+
+<!-- STATUS BADGE -->
+<div id="statusBadge" style="display:none"></div>
+
+<!-- SUMMARY PANEL -->
+<div class="summary-panel" id="summaryPanel">
+  <div class="summary-header">
+    <div class="summary-title">📊 Interest Summary</div>
+    <div class="period-toggle">
+      <button class="period-btn active" id="btnMonthly" onclick="setPeriod('monthly')">Monthly</button>
+      <button class="period-btn" id="btnAnnual" onclick="setPeriod('annual')">Annual</button>
+    </div>
+  </div>
+  <div class="summary-body" id="summaryBody"></div>
+</div>
+
+<script>
+  let sources = [];
+  let sourceCounter = 0;
+  let period = 'monthly';
+
+  function formatINR(n) {
+    if (n >= 10000000) return '₹' + (n / 10000000).toFixed(2) + ' Cr';
+    if (n >= 100000) return '₹' + (n / 100000).toFixed(2) + ' L';
+    if (n >= 1000) return '₹' + (n / 1000).toFixed(1) + 'K';
+    return '₹' + n.toFixed(0);
+  }
+
+  function addSource() {
+    sourceCounter++;
+    const id = sourceCounter;
+    sources.push({ id, name: '', amount: 0, rate: 0, type: 'interest' });
+
+    const card = document.createElement('div');
+    card.className = 'source-card interest-card';
+    card.id = `src-${id}`;
+    card.innerHTML = `
+      <div class="source-num">SOURCE #${id}</div>
+      <button class="delete-btn" onclick="removeSource(${id})">✕</button>
+      <div class="card-row">
+        <div class="field-group" style="flex:2; min-width:130px">
+          <div class="field-lbl">Source / Name</div>
+          <input class="field-input" type="text" placeholder="e.g. Personal Loan"
+            oninput="updateField(${id}, 'name', this.value)">
+        </div>
+        <div class="field-group">
+          <div class="field-lbl">Amount (₹)</div>
+          <input class="field-input" type="number" placeholder="0"
+            oninput="updateField(${id}, 'amount', parseFloat(this.value)||0)">
+        </div>
+        <div class="field-group" style="max-width:90px">
+          <div class="field-lbl">Rate (%/yr)</div>
+          <input class="field-input" id="rate-${id}" type="number" step="0.1" placeholder="0"
+            oninput="updateField(${id}, 'rate', parseFloat(this.value)||0)">
+        </div>
+      </div>
+      <div class="interest-type-toggle">
+        <button class="toggle-btn active-interest" id="tb-int-${id}" onclick="setType(${id},'interest')">🏦 On Interest</button>
+        <button class="toggle-btn" id="tb-free-${id}" onclick="setType(${id},'free')">🤝 Interest Free</button>
+      </div>
+      <div class="interest-result" id="ir-${id}">
+        <div class="ir-item">
+          <span class="ir-lbl">MONTHLY INTEREST</span>
+          <span class="ir-val" id="ir-mo-${id}">₹0</span>
+        </div>
+        <div class="ir-item">
+          <span class="ir-lbl">ANNUAL INTEREST</span>
+          <span class="ir-val" id="ir-an-${id}">₹0</span>
+        </div>
+      </div>
+    `;
+    document.getElementById('sourcesList').appendChild(card);
+  }
+
+  function removeSource(id) {
+    sources = sources.filter(s => s.id !== id);
+    document.getElementById(`src-${id}`)?.remove();
+    updateProgress();
+  }
+
+  function updateField(id, field, val) {
+    const src = sources.find(s => s.id === id);
+    if (!src) return;
+    src[field] = val;
+    updateProgress();
+    recalcInterest(id);
+  }
+
+  function setType(id, type) {
+    const src = sources.find(s => s.id === id);
+    if (!src) return;
+    src.type = type;
+    const card = document.getElementById(`src-${id}`);
+    card.className = `source-card ${type === 'interest' ? 'interest-card' : 'free-card'}`;
+    document.getElementById(`tb-int-${id}`).className = `toggle-btn ${type==='interest' ? 'active-interest' : ''}`;
+    document.getElementById(`tb-free-${id}`).className = `toggle-btn ${type==='free' ? 'active-free' : ''}`;
+    if (type === 'free') {
+      const rateInput = document.getElementById(`rate-${id}`);
+      rateInput.value = '';
+      rateInput.disabled = true;
+      rateInput.style.opacity = '.3';
+      src.rate = 0;
+    } else {
+      const rateInput = document.getElementById(`rate-${id}`);
+      rateInput.disabled = false;
+      rateInput.style.opacity = '1';
+    }
+    recalcInterest(id);
+    updateProgress();
+  }
+
+  function recalcInterest(id) {
+    const src = sources.find(s => s.id === id);
+    if (!src) return;
+    const annual = (src.type === 'free') ? 0 : (src.amount * src.rate / 100);
+    const monthly = annual / 12;
+    const irDiv = document.getElementById(`ir-${id}`);
+    if (src.type === 'interest' && src.amount > 0 && src.rate > 0) {
+      irDiv.classList.add('visible');
+      document.getElementById(`ir-mo-${id}`).textContent = formatINR(monthly) + '/mo';
+      document.getElementById(`ir-an-${id}`).textContent = formatINR(annual) + '/yr';
+    } else {
+      irDiv.classList.remove('visible');
+    }
+  }
+
+  function updateProgress() {
+    const goal = parseFloat(document.getElementById('goalInput').value) || 0;
+    const done = sources.reduce((s, x) => s + x.amount, 0);
+    const rem = Math.max(0, goal - done);
+    const pct = goal > 0 ? Math.min(100, (done / goal) * 100) : 0;
+
+    if (goal > 0) {
+      document.getElementById('progressWrap').style.display = 'block';
+      document.getElementById('doneAmt').textContent = formatINR(done);
+      document.getElementById('remAmt').textContent = formatINR(rem);
+      document.getElementById('pct').textContent = pct.toFixed(0) + '%';
+      document.getElementById('progressFill').style.width = pct + '%';
+    } else {
+      document.getElementById('progressWrap').style.display = 'none';
+    }
+  }
+
+  function setPeriod(p) {
+    period = p;
+    document.getElementById('btnMonthly').className = `period-btn ${p==='monthly' ? 'active' : ''}`;
+    document.getElementById('btnAnnual').className  = `period-btn ${p==='annual'  ? 'active' : ''}`;
+    renderSummary();
+  }
+
+  function showSummary() {
+    document.getElementById('summaryPanel').classList.add('visible');
+    const goal = parseFloat(document.getElementById('goalInput').value) || 0;
+    const done = sources.reduce((s, x) => s + x.amount, 0);
+    const rem = Math.max(0, goal - done);
+
+    const badge = document.getElementById('statusBadge');
+    badge.style.display = 'block';
+    if (rem <= 0) {
+      badge.innerHTML = `<div class="status-badge badge-done"><div class="badge-dot"></div>Fully Arranged — ${formatINR(done)} of ${formatINR(goal)}</div>`;
+    } else {
+      badge.innerHTML = `<div class="status-badge badge-partial"><div class="badge-dot"></div>${formatINR(done)} arranged · ${formatINR(rem)} still needed</div>`;
+    }
+    renderSummary();
+    document.getElementById('summaryPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderSummary() {
+    const body = document.getElementById('summaryBody');
+    if (!sources.length) { body.innerHTML = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:16px 0">No sources added yet.</p>'; return; }
+
+    let rows = '';
+    let totalInterest = 0;
+
+    sources.forEach(src => {
+      const annual = src.type === 'free' ? 0 : (src.amount * src.rate / 100);
+      const monthly = annual / 12;
+      const interest = period === 'monthly' ? monthly : annual;
+      totalInterest += interest;
+
+      const interestStr = src.type === 'free'
+        ? '<span class="sr-interest no-interest">0% — Free</span>'
+        : `<span class="sr-interest has-interest">${src.rate}% → ${formatINR(interest)}/${period === 'monthly' ? 'mo' : 'yr'}</span>`;
+
+      rows += `
+        <div class="summary-row">
+          <div>
+            <div style="font-weight:600;margin-bottom:3px">${src.name || 'Unnamed Source'}</div>
+            <div class="sr-name">${formatINR(src.amount)}</div>
+          </div>
+          ${interestStr}
+        </div>`;
+    });
+
+    const goal = parseFloat(document.getElementById('goalInput').value) || 0;
+    const done = sources.reduce((s, x) => s + x.amount, 0);
+    const rem = Math.max(0, goal - done);
+
+    body.innerHTML = rows + `
+      <div class="total-row">
+        <div>
+          <div class="total-lbl">Total ${period === 'monthly' ? 'Monthly' : 'Annual'} Interest</div>
+          ${goal > 0 ? `<div style="font-size:.72rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:3px">${formatINR(done)} of ${formatINR(goal)} arranged</div>` : ''}
+        </div>
+        <div class="total-val">${formatINR(totalInterest)}</div>
+      </div>
+      ${rem > 0 && goal > 0 ? `<div style="text-align:center;margin-top:14px;font-family:'DM Mono',monospace;font-size:.75rem;color:var(--accent2)">⚠ ${formatINR(rem)} still needs to be arranged</div>` : ''}
+    `;
+  }
+</script>
+</body>
+</html>
